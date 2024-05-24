@@ -1,0 +1,67 @@
+- name: Configure Postgres Port
+  lineinfile:
+    dest: "/etc/postgresql/{{ percona_pgsql.version }}/main/postgresql.conf"
+    regexp: "^#?port.+$"
+    line: "port = '{{ percona_pgsql.postgres_port }}'"
+    state: present
+    mode: 0644
+  notify:
+    - "Restart percona postgresql"
+
+- name: Add new configuration in postgresql
+  blockinfile:
+    dest: /etc/postgresql/{{ percona_pgsql.version }}/main/postgresql.conf
+    block: |
+      include 'server.conf'
+  notify:
+    - "Restart percona postgresql"
+
+- name: Add new configuration to "server.conf"
+  blockinfile:
+    create: true
+    owner: postgres
+    group: postgres
+    mode: 0644
+    dest: /etc/postgresql/{{ percona_pgsql.version }}/main/server.conf
+    block: |
+      listen_addresses = '{{ percona_pgsql.postgres_listen_addresses }}'
+  notify:
+    - "Restart percona postgresql"
+
+############### Block for PMM-Agent ###############
+
+- name: Install PostgreSQL extension
+  apt:
+    name:
+      - postgresql-contrib
+    update_cache: yes
+    cache_valid_time: 3600
+  tags: create_pmm_user_pgsql
+  when: percona_pgsql.pmm|bool == true
+
+- name: Add preload libraries for pmm-monitoring
+  blockinfile:
+    insertafter: "EOF"
+    marker_begin: "PMM Configuration block"
+    marker_end: "End of PMM Configuration block"
+    dest: /etc/postgresql/{{ percona_pgsql.version }}/main/server.conf
+    block: |
+      shared_preload_libraries = 'pg_stat_statements, pg_stat_monitor'
+      pg_stat_monitor.pgsm_query_max_len = 2048
+      track_activity_query_size = 2048 # Increase tracked query string size
+      pg_stat_statements.track = all   # Track all statements including nested
+      track_io_timing = on             # Capture read/write stats
+  notify:
+    - "Restart percona postgresql"
+  tags: create_pmm_user_pgsql
+  when: percona_pgsql.pmm|bool == true
+
+- name: Create extension schema for pmm-monitoring
+  become: true
+  become_user: postgres
+  postgresql_query:
+    db: postgres
+    query: "CREATE EXTENSION IF NOT EXISTS pg_stat_monitor"
+    port: "{{ percona_pgsql.postgres_port }}"
+  tags: create_pmm_user_pgsql
+  when: percona_pgsql.pmm|bool == true

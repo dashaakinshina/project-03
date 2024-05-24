@@ -1,0 +1,55 @@
+roles:
+  base_setup: yes
+  nginx: yes
+  apache: yes
+  percona_pgsql: yes
+  php: yes
+  certbot: yes
+  zabbix_agent: yes
+
+letsencrypt:
+  email: dashaakinshinachechulina@hotmail.com
+  certificates:
+    - feedback.server-02.wihop.by
+    - cms.server-02.wihop.by
+    - mail.server-02.wihop.by
+    - kibana.server-02.wihop.by
+    - server-02.wihop.by
+
+nginx:
+  proxied_sites:
+    kibana.server-02.wihop.by: "10.10.99.10:5601"
+    feedback.server-02.wihop.by: "127.0.0.1:8080"
+    cms.server-02.wihop.by: "127.0.0.1:8081"
+    mail.server-02.wihop.by: "127.0.0.1:8082"
+    server-02.wihop.by: "127.0.0.1:8080"
+
+apache:
+  app_user: "www-data"
+  disable_default: true
+  sites:
+    - host: feedback.server-02.wihop.by
+      conf: feedback.server-02.wihop.conf
+      document_root: /var/www/html_1
+      port: 8080
+    - host: cms.server-02.wihop.by
+      conf: cms.server-02.wihop.conf
+      document_root: /var/www/html_2
+      port: 8081
+    - host: mail.server-02.wihop.by
+      conf: mail.server-02.wihop.conf
+      document_root: /var/www/html_3
+      port: 8082
+
+percona_pgsql:
+  version: 12
+  postgres_listen_addresses: 0.0.0.0
+  psql_databases:
+    - name: wp_db
+  psql_users:
+    - name: wp_user
+      password: "123qwe123"
+      db: wp_db
+      priv: ALL
+      state: "present"
+  psql_ro_users: []

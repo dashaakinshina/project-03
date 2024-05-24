@@ -1,0 +1,18 @@
+version: "3.7"
+services:
+    filebeat:
+        entrypoint: "filebeat -e -strict.perms=false"
+        build:
+          context: filebeat/
+          args:
+            ELASTIC_VERSION: ${ELASTIC_VERSION}
+        restart: always
+
+        volumes:
+            # add Filebeat config file
+          - "./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro"
+          - "/var/log/nginx/access.log:/var/log/nginx/access.log:ro"
+          - "/var/log/syslog:/var/log/syslog:ro"
+          - "/var/log/auth.log:/var/log/auth.log:ro"
+          - "/var/lib/docker/containers:/var/lib/docker/containers:ro"
+          - "/var/run/docker.sock:/var/run/docker.sock:ro"

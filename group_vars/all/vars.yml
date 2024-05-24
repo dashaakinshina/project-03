@@ -1,0 +1,120 @@
+default_ansible_user: dashaakinshinachechulina
+
+roles:
+  base_setup: no
+  docker: no
+  elk: no
+  nginx: no
+  apache: no
+  percona_pgsql: no
+  php: no
+  mysql: no
+  zabbix_server: no
+  bind: no
+  grafana: no
+  elasticsearch: no
+  kibana: no
+  logstash: no
+  filebeat: no
+  filebeat_docker: no
+  certbot: no
+  zabbix_agent: no
+
+zabbix_agent:
+  server: 10.10.99.1
+  server_url: "https://zabbix.server-01.wihop.by"
+  server_login: robot
+  server_password: hfpsEfjv7skdIf82mvalfD
+  host_group: "Linux servers"
+  port: 10050
+
+elk:
+  ELASTIC_VERSION: '8.7.1'
+  ELASTIC_PASSWORD: 'changeme'
+  LOGSTASH_INTERNAL_PASSWORD: 'changeme'
+  KIBANA_SYSTEM_PASSWORD: 'changeme'
+  METRICBEAT_INTERNAL_PASSWORD: ''
+  FILEBEAT_INTERNAL_PASSWORD: ''
+  HEARTBEAT_INTERNAL_PASSWORD: ''
+  MONITORING_INTERNAL_PASSWORD: ''
+  BEATS_SYSTEM_PASSWORD: ''
+
+php:
+  project_user: www-data
+  version: 7.1
+  composer_version: 1
+  xdebug_enabled: no
+  pm:
+    max_children: 60
+    start_servers: 5
+    min_spare_servers: 5
+    max_spare_servers: 10
+    max_requests: 1000
+  slowlog:
+    enabled: yes
+    timeout: 5
+  fastcgi_timeout: 5m
+  fastcgi_buffer_size: "4k"
+  fastcgi_buffers: "8 4k"
+  max_execution_time: 300
+  upload_limit: 256M
+  default_socket_timeout: 60
+  memory_limit: 3G
+  opcache:
+    memory_consumption: 256
+
+apache:
+  app_user: "www-data"
+  disable_default: true
+  sites:
+    - host: lamp1.example.com
+      conf: lamp1.example.conf
+      document_root: /var/www/html_1
+      port: 8080
+    - host: lamp2.example.com
+      conf: lamp2.example.conf
+      document_root: /var/www/html_2
+      port: 8081
+
+percona_pgsql:
+  version: 15
+  postgres_port: 5432
+  postgres_listen_addresses: 127.0.0.1
+  pmm: false
+  pmm_password: "123"
+  replication: False
+  replica_user: replica
+  replica_pass: m1sqlr00tt3streplicas
+  role: master # or slave
+  slave_address: []
+  master_address: []
+  database_creation: true
+  psql_databases:
+    - name: default_pgsql_database
+    #  lc_collate: # defaults to 'en_US.UTF-8'
+    #  lc_ctype: # defaults to 'en_US.UTF-8'
+    #  encoding: # defaults to 'UTF-8'
+    #  template: # defaults to 'template0'
+    #  conn_limit: # defauls to 10
+    #  owner: # defaults to postgresql_user
+    #  state: # defaults to 'present'
+  users_creation: true
+  psql_users:
+    - name: default_pgsql_user
+      password: m1sqlr00tt3st
+      #  priv: # defaults to not set
+      #  role_attr_flags: # defaults to not set
+      #  db: "default_pgsql_database"
+      #  state: # defaults to 'present'
+  psql_group:
+    - name: monitoring
+      password: Monitoring#Secret@123
+      group: pg_monitor
+  pg_hba_users: []
+  psql_ro_users:
+    - name: default_pgsql_user
+      password: m1sqlr00tt3st
+      priv: SELECT
+      db: "default_pgsql_database"
+      #  role_attr_flags: # defaults to not set
+      #  state: # defaults to 'present'

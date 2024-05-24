@@ -1,0 +1,14 @@
+- name: Check if Docker is installed
+  become: true
+  stat:
+    path: /usr/bin/docker
+  register: docker_installed
+        
+- name: Check if Docker Compose is installed
+  become: true
+  stat:
+    path: /usr/local/bin/docker-compose
+  register: docker_compose_installed
+
+- include_tasks: install_docker_elk.yml
+  when: docker_installed.stat.exists and docker_compose_installed.stat.exists

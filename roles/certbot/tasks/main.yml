@@ -1,0 +1,23 @@
+- name: "[certbot] Create /etc/letsencrypt dir"
+  file:
+    path: /etc/letsencrypt
+    state: directory
+    mode: 0755
+
+- name: "[certbot] Install certbot"
+  apt:
+    name:
+      - certbot
+      - python3-certbot-nginx
+    update_cache: yes
+    cache_valid_time: 3600
+  when: roles.certbot == True
+
+- name: "[certbot] Run certbot"
+  command:
+    certbot --nginx --non-interactive --expand --agree-tos --redirect --email {{ letsencrypt.email }}
+    --cert-name {{ item }} --domains {{ item }}
+  with_list: '{{ letsencrypt.certificates }}'
+  when: roles.certbot == True
+  notify:
+    - restart nginx

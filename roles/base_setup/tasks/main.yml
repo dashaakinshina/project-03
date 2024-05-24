@@ -1,0 +1,33 @@
+- name: "[base-setup] Put correct repo file"
+  copy:
+    src: sources-{{ ansible_lsb.codename|lower }}.list
+    dest: /etc/apt/sources.list
+    owner: root
+    group: root
+    mode: 0644
+    force: yes
+  changed_when: false
+  when:
+    ansible_os_family == "Debian"
+
+- name: "[base-setup] Install packages (Debian)"
+  apt:
+    name:
+      - python3
+      - python3-pip
+      - net-tools
+    update_cache: yes
+  when:
+    ansible_os_family == "Debian"
+
+- name: "[base-setup] Install packages (RedHat)"
+  yum:
+    name:
+      - python3
+      - python3-pip
+      - net-tools
+      - psycopg2-binary
+    update_cache: yes
+  when:
+    ansible_os_family == "RedHat"
+

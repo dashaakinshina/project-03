@@ -1,0 +1,32 @@
+- name: Update apt cache
+  apt:
+    update_cache: true
+    cache_valid_time: 300
+
+- name: Add Percona Repository
+  apt:
+    autoremove: true
+    update_cache: true
+    deb: https://repo.percona.com/apt/percona-release_latest.{{ ansible_lsb.codename }}_all.deb
+    state: present
+
+- name: "Enable Percona Repository"
+  command: percona-release setup ppg-{{ percona_pgsql.version }}
+  changed_when: false
+
+- name: Install Postgresql on Debian
+  apt:
+    name: "{{ item }}"
+    update_cache: true
+    state: present
+  loop:
+    - acl
+    - percona-postgresql-{{ percona_pgsql.version }}
+    - percona-postgresql-{{ percona_pgsql.version }}-pgaudit
+    - percona-patroni
+    - percona-pg-stat-monitor{{ percona_pgsql.version }}
+    - percona-postgresql-contrib
+
+- name: Start Postgresql service
+  command: "pg_ctlcluster {{ percona_pgsql.version }} main start"
+  changed_when: true

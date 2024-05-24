@@ -1,0 +1,18 @@
+- name: "[nginx] Install nginx"
+  apt:
+    name: nginx
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: "[nginx] Configure sites"
+  template:
+    src: template-proxy.conf.j2
+    dest: "/etc/nginx/sites-enabled/{{ item.key }}.conf"
+  with_dict: '{{ nginx.proxied_sites }}'
+  when: nginx.proxied_sites is defined
+
+- name: "[nginx] Restart nginx"
+  service:
+    name: nginx
+    enabled: yes
+    state: restarted

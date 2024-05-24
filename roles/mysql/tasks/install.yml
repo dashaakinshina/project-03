@@ -1,0 +1,38 @@
+  # создать каталог если не существует (нужно для исключения ошибок при мануальном удалении каталогов)
+- name: Create directory /var/lib/mysql
+  file:
+    path: /var/lib/mysql
+    state: directory
+    owner: mysql
+    group: mysql
+
+  # создать каталог если не существует (нужно для исключения ошибок при мануальном удалении каталогов)
+- name: Create directory /var/log/mysql
+  file:
+    path: /var/log/mysql
+    state: directory
+    owner: mysql
+    group: mysql
+
+  # создать каталог если не существует (нужно для исключения ошибок при мануальном удалении каталогов)
+- name: Create directory /etc/mysql/conf.d
+  file:
+    path: /etc/mysql/conf.d
+    state: directory
+    owner: root
+    group: root
+    recurse: true
+
+- name: Install MySQL
+  apt:
+    name:
+      - mysql-client
+      - mysql-server
+      - python3-mysqldb
+    update_cache: yes
+    cache_valid_time: 3600
+
+  # меняем пароль root, если установка с чистого листа
+- name: MySQL change password
+  shell: mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '{{ secrets.mysql.root_password }}';"
+  ignore_errors: yes

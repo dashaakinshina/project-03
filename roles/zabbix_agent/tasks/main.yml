@@ -1,0 +1,135 @@
+- name: "[zabbix-agent] Install .deb package"
+  apt:
+    deb: "{{ zabbix_agent_url_deb }}"
+  when:
+    ansible_os_family == "Debian"
+
+- name: "[zabbix-agent] Install .rpm package"
+  yum:
+    name: "{{ zabbix_agent_url_rpm }}"
+  when:
+    ansible_os_family == "RedHat"
+
+- name: "[zabbix-agent] Install zabbix-agent (Debian)"
+  apt:
+    name:
+      - zabbix-agent
+    update_cache: yes
+  when:
+    ansible_os_family == "Debian"
+
+- name: "[zabbix-agent] Install zabbix-agent (RedHat)"
+  yum:
+    name:
+      - zabbix-agent
+    update_cache: yes
+  when:
+    ansible_os_family == "RedHat"
+
+- name: "[zabbix-agent] Edit zabbix-agent config (set server {{ zabbix_agent.server }})"
+  ansible.builtin.lineinfile:
+    path: /etc/zabbix/zabbix_agentd.conf
+    regexp: "# Server="
+    line: "Server={{ zabbix_agent.server }}"
+
+- name: "[zabbix-agent] Edit zabbix-agent config"
+  ansible.builtin.lineinfile:
+    path: /etc/zabbix/zabbix_agentd.conf
+    regexp: "Server=127.0.0.1"
+    line: "# Server=127.0.0.1"
+
+- name: "[zabbix-agent] Edit zabbix-agent config"
+  ansible.builtin.lineinfile:
+    path: /etc/zabbix/zabbix_agentd.conf
+    regexp: "ServerActive=127.0.0.1"
+    line: "# ServerActive=127.0.0.1"
+
+- name: "[zabbix-agent] Edit zabbix-agent config (set hostname)"
+  ansible.builtin.lineinfile:
+    path: /etc/zabbix/zabbix_agentd.conf
+    regexp: "# Hostname="
+    line: "Hostname={{ inventory_hostname }}"
+
+- name: "[zabbix-agent] Get unique PSK for host"
+  shell: openssl rand -hex 32
+  register: tls_psk
+  changed_when: false
+
+- name: "[zabbix-agent] Set variable TLS PSK Identity"
+  set_fact: var_tls_psk={{ tls_psk.stdout }}
+
+- name: "[zabbix-agent] Get unique PSK ID for host"
+  shell: openssl rand -hex 4
+  register: tls_psk_identity
+  changed_when: false
+
+- name: "[zabbix-agent] Set variable TLS PSK h32"
+  set_fact: var_tls_psk_identity={{ tls_psk_identity.stdout }}
+
+- name: "[zabbix-agent] Edit zabbix-agent config (TLSPSKIdentity)"
+  ansible.builtin.lineinfile:
+    path: /etc/zabbix/zabbix_agentd.conf
+    regexp: "# TLSPSKIdentity="
+    line: "TLSPSKIdentity={{ var_tls_psk_identity }}"
+
+- name: "[zabbix-agent] Edit zabbix-agent config (TLSConnect)"
+  ansible.builtin.lineinfile:
+    path: /etc/zabbix/zabbix_agentd.conf
+    regexp: "# TLSConnect="
+    line: "TLSConnect=psk"
+
+- name: "[zabbix-agent] Edit zabbix-agent config (TLSAccept)"
+  ansible.builtin.lineinfile:
+    path: /etc/zabbix/zabbix_agentd.conf
+    regexp: "# TLSAccept="
+    line: "TLSAccept=psk"
+
+- name: "[zabbix-agent] Edit zabbix-agent config (TLSPSKFile)"
+  ansible.builtin.lineinfile:
+    path: /etc/zabbix/zabbix_agentd.conf
+    regexp: "# TLSPSKFile="
+    line: "TLSPSKFile=/etc/zabbix/zabbix_agent.psk"
+
+- name: "[zabbix-agent] Create file /etc/zabbix/zabbix_agent.psk"
+  shell: echo "{{ var_tls_psk }}" > /etc/zabbix/zabbix_agent.psk
+
+- name: "[zabbix-agent] Create a new host or update an existing host"
+  zabbix_host:
+    server_url: "{{ zabbix_agent.server_url }}"
+    login_user: "{{ zabbix_agent.server_login }}"
+    login_password: "{{ zabbix_agent.server_password }}"
+    host_name: "{{ inventory_hostname }}"
+    visible_name: "{{ inventory_hostname }}"
+    host_groups: "{{ zabbix_agent.host_group }}"
+    link_templates:
+      - "Linux by Zabbix agent"
+    status: enabled
+    state: present
+    interfaces:
+      - type: 1
+        main: 1
+        useip: 1
+        ip: "{{ ansible_host }}"
+        port: "{{ zabbix_agent.port }}"
+  changed_when: false
+  delegate_to: localhost
+  become: no
+
+- name: "[zabbix-agent] Update an existing host's TLS settings"
+  zabbix_host:
+    server_url: "{{ zabbix_agent.server_url }}"
+    login_user: "{{ zabbix_agent.server_login }}"
+    login_password: "{{ zabbix_agent.server_password }}"
+    host_name: "{{ inventory_hostname }}"
+    tls_accept: 2
+    tls_connect: 2
+    tls_psk_identity: "{{ var_tls_psk_identity }}"
+    tls_psk: "{{ var_tls_psk }}"
+  delegate_to: localhost
+  become: no
+
+- name: "[zabbix-agent] Restart zabbix-agent"
+  service:
+    name: zabbix-agent
+    enabled: yes
+    state: restarted

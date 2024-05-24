@@ -1,0 +1,50 @@
+filebeat.inputs:
+  - type: log
+    enabled: true
+    fields:
+      format: nginx_access_prometheus
+    paths:
+      - /var/log/nginx/access.log
+    include_lines: ['prometheus']
+
+  - type: log
+    enabled: true
+    fields:
+      format: nginx_access_grafana
+    paths:
+      - /var/log/nginx/access.log
+    include_lines: ['grafana']
+
+# ============================== Filebeat modules ==============================
+
+filebeat.config.modules:
+  # Glob pattern for configuration loading
+  path: ${path.config}/modules.d/*.yml
+ # Set to true to enable config reloading
+  reload.enabled: false
+
+  # Period on which files under path should be checked for changes
+  #reload.period: 10s
+
+# ======================= Elasticsearch template setting =======================
+
+setup.template.settings:
+  index.number_of_shards: 1
+  #index.codec: best_compression
+  #_source.enabled: false
+
+# output.elasticsearch:
+#  hosts: ["158.160.116.250:5044"]
+#  username: "elastic"
+#  password: "q12wQ!@W"
+
+output.logstash:
+  hosts: ["158.160.116.250:5044"]
+#  username: "elastic"
+#  password: "q12wQ!@W"
+
+logging.json: true
+logging.metrics.enabled: false
+
+
+logging.level: debug

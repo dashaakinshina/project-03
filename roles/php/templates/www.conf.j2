@@ -1,0 +1,25 @@
+[www]
+user = {{ php.project_user }}
+group = {{ php.project_user }}
+listen = /run/php/php{{ php.version }}-fpm.sock
+listen.owner = www-data
+listen.group = www-data
+
+pm = dynamic
+pm.max_children = {{ php.pm.max_children }}
+pm.start_servers = {{ php.pm.start_servers }}
+pm.min_spare_servers = {{ php.pm.min_spare_servers }}
+pm.max_spare_servers = {{ php.pm.max_spare_servers }}
+pm.max_requests = {{ php.pm.max_requests }}
+
+access.log = /var/log/php{{ php.version }}/access.log
+access.format = "%{HTTP_HOST}e %{REMOTE_ADDR}e %{HTTP_X_FORWARDED_FOR}e - %u [%t] [%T] \"%m %r%Q%q\" %s [%p %P] %f %{mili}d msec %{kilo}M kB %C%% \"%{HTTP_USER_AGENT}e\""
+
+pm.status_path = /php_status
+ping.path = /php_ping
+
+request_terminate_timeout = 3600
+{% if php.slowlog.enabled %}
+slowlog = /var/log/php{{ php.version }}/slow.log
+request_slowlog_timeout = {{ php.slowlog.timeout }}s
+{% endif %}

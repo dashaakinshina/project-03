@@ -1,0 +1,124 @@
+- name: Create users in Postgres
+  postgresql_user:
+    name: "{{ item.name }}"
+    password: "{{ item.password | default(m1sqlagis2) }}"
+    port: "{{ percona_pgsql.postgres_port }}"
+    db: "{{ item.db | default('') }}"
+  with_items:
+    - "{{ percona_pgsql.psql_users }}"
+    - "{{ percona_pgsql.psql_group }}"
+  become: true
+  become_user: postgres
+  tags: create_user_pgsql
+  when: percona_pgsql.replication|bool == False or percona_pgsql.role == 'master'
+
+- name: Update pg_hub for new users
+  postgresql_pg_hba:
+    dest: /etc/postgresql/{{ percona_pgsql.version }}/main/pg_hba.conf
+    contype: host
+    users: "{{ item.name }}"
+    source: 0.0.0.0/0
+    databases: "{{ item.db | default('all') }}"
+  with_items:
+    - "{{ percona_pgsql.psql_users }}"
+    - "{{ percona_pgsql.psql_group }}"
+    - "{{ percona_pgsql.pg_hba_users }}"
+    - "{{ percona_pgsql.psql_ro_users }}"
+  notify:
+    - "Restart percona postgresql"
+  become: true
+  become_user: postgres
+  tags: create_user_pgsql,create_ro_user_pgsql
+  when: percona_pgsql.replication|bool == False or percona_pgsql.role == 'master'
+
+- name: Update privs for new users
+  postgresql_privs:
+    type: database
+    database: "{{ item.db | default('') }}"
+    privs: "{{ item.priv | default('') }}"
+    role: "{{ item.name }}"
+  with_items:
+    - "{{ percona_pgsql.psql_users }}"
+  notify:
+    - "Restart percona postgresql"
+  become: true
+  become_user: postgres
+  tags: create_user_pgsql
+  when: percona_pgsql.replication|bool == False or percona_pgsql.role == 'master'
+
+# This task is changing owner of database for possibility to create tables,
+# and object in schema public- name: Update database owner for new users in psql >= 15
+- name: Update database owner for new users
+  postgresql_owner:
+    db: "{{ item.db | default('') }}"
+    new_owner: "{{ item.name }}"
+    obj_type: database
+    obj_name: "{{ item.db | default('') }}"
+  with_items:
+    - "{{ percona_pgsql.psql_users }}"
+  notify:
+    - "Restart percona postgresql"
+  become: true
+  become_user: postgres
+  tags: create_user_pgsql
+  when: percona_pgsql.replication|bool == False or percona_pgsql.role == 'master'
+
+- name: Add users to groups
+  postgresql_membership:
+    group: "{{ item.group }}"
+    user: "{{ item.name }}"
+  with_items:
+    - "{{ percona_pgsql.psql_group }}"
+  become: true
+  become_user: postgres
+  tags: create_user_pgsql
+  when: percona_pgsql.replication|bool == False or percona_pgsql.role == 'master'
+
+- name: Ensure users in Postgres are configured
+  become: true
+  become_user: postgres
+  postgresql_user:
+    name: "{{ item.name }}"
+    password: "{{ item.password | default(m1sqlagis2) }}"
+    encrypted: "{{ item.encrypted | default(omit) }}"
+    priv: "{{ item.priv | default(omit) }}"
+    role_attr_flags: "{{ item.role_attr_flags | default(omit) }}"
+    db: "{{ item.db | default(omit) }}"
+    port: "{{ percona_pgsql.postgres_port }}"
+    state: "{{ item.state | default('present') }}"
+    conn_limit: "{{ item.conn_limit | default(10) }}"
+  with_items:
+    - "{{ percona_pgsql.psql_users }}"
+  # no_log: true
+  tags: create_user_pgsql
+  when: percona_pgsql.replication|bool == False or percona_pgsql.role == 'master'
+
+############## Block for PMM user ##############
+
+- name: Creating pmm_agent user
+  become: true
+  become_user: postgres
+  postgresql_user:
+    name: "pmm_agent"
+    password: "{{ percona_pgsql.pmm_password }}"
+    encrypted: "yes"
+    role_attr_flags: "SUPERUSER,CREATEDB"
+    port: "{{ percona_pgsql.postgres_port }}"
+    state: "present"
+    conn_limit: "10"
+  tags: create_pmm_user_pgsql
+  when: percona_pgsql.pmm|bool == true
+
+- name: Update pg_hub for new users
+  postgresql_pg_hba:
+    dest: /etc/postgresql/15/main/pg_hba.conf
+    contype: host
+    users: pmm_agent
+    source: 0.0.0.0/0
+    databases: all
+  notify:
+    - "Restart percona postgresql"
+  become: true
+  become_user: postgres
+  tags: create_pmm_user_pgsql
+  when: percona_pgsql.pmm|bool == true

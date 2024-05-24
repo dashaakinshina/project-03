@@ -1,0 +1,11 @@
+- name: "[mysql] Populate service facts"
+  service_facts:
+
+- include_tasks: install.yml
+  when: ansible_facts.services['mysql'] is not defined or ansible_facts.services['mysql'].state == "stopped"
+
+- name: "[mysql] Copy MySQL configuration"
+  template:
+    src: custom.cnf.j2
+    dest: /etc/mysql/conf.d/z_custom.cnf
+  notify: Restart mysql

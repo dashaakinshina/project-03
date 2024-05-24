@@ -1,0 +1,28 @@
+- name: "[grafana] Install packages"
+  apt:
+    name:
+      - apt-transport-https
+      - software-properties-common
+      - wget
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: "[grafana] Add apt key"
+  shell: apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 963FA27710458545
+
+- name: "[grafana] Create sources list"
+  shell: echo "deb https://mirror.yandex.ru/mirrors/packages.grafana.com/oss/deb stable main" > /etc/apt/sources.list.d/grafana.list
+
+- name: "[grafana] Install grafana"
+  apt:
+    name: grafana=9.3.2
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: "[grafana] Start service"
+  service:
+    name: grafana-server
+    enabled: yes
+    state: started
+
+- include_tasks: nginx_config.yml

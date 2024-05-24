@@ -1,0 +1,38 @@
+- name: "[elasticsearch] Create sources list"
+  shell: echo "deb [trusted=yes] https://mirror.yandex.ru/mirrors/elastic/7/ stable main" | sudo tee /etc/apt/sources.list.d/elastic-7.x.list &&
+         sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys D27D666CD88E42B4
+
+- name: "[filebeat] Update cache"
+  apt:
+    update_cache: yes
+
+- name: "[elasticsearch] Install elasticsearch"
+  apt:
+    name: elasticsearch
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: "[elasticsearch] Edit config"
+  ansible.builtin.lineinfile:
+    path: /etc/elasticsearch/elasticsearch.yml
+    regexp: "network.host:"
+    line: "network.host: {{ elasticsearch.bind }}"
+
+- name: "[elasticsearch] Edit config"
+  ansible.builtin.lineinfile:
+    path: /etc/elasticsearch/elasticsearch.yml
+    regexp: "discovery.type:"
+    line: "discovery.type: single-node"
+
+- name: "[elasticsearch] Start service"
+  service:
+    name: elasticsearch
+    enabled: yes
+    state: started
+
+- name: "[elasticsearch] Check access"
+  shell: curl -X GET "{{ elasticsearch.bind }}:9200"
+  register: check_elasticsearch
+
+- debug:
+    var:  check_elasticsearch

@@ -1,0 +1,51 @@
+- name: Create docker-compose.yml file
+  become: true
+  template:
+    src: docker-compose.yml.j2
+    dest: /tmp/docker-compose.yml
+    owner: admin
+    group: admin
+    mode: '0644'
+
+- name: Copy elasticsearch dir
+  copy:
+    src: elasticsearch/
+    dest: /tmp/elasticsearch
+
+- name: Copy kibana dir
+  copy:
+    src: kibana/
+    dest: /tmp/kibana
+
+- name: Copy logstash dir
+  copy:
+    src: logstash/
+    dest: /tmp/logstash
+
+- name: Copy setup dir
+  copy:
+    src: setup/
+    dest: /tmp/setup
+
+- name: Changing the permissions	
+  file:
+      path: /tmp/setup/
+      recurse: yes
+      owner: root
+      group: root
+      mode: 0777
+
+- name: Create .env file
+  template:
+    src: .env.j2
+    dest: /tmp/.env
+
+- name: Setup using docker-compose
+  command: docker compose -p elk up setup
+  args:
+    chdir: /tmp/
+
+- name: Setup using docker-compose
+  command: docker compose -p elk up -d --build
+  args:
+    chdir: /tmp/

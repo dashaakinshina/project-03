@@ -1,0 +1,36 @@
+roles:
+  base_setup: yes
+  docker: yes
+  mysql: yes
+  zabbix_server: yes
+  grafana: yes
+  certbot: yes
+  filebeat: yes
+
+zabbix:
+  servername: zabbix.server-01.wihop.by
+  zabbix_db_password: {{ secrets.zabbix_db_password }}
+
+mysql:
+  host: localhost
+  root_password: {{ secrets.mysql.root_password }}
+  port: 3306
+  login_unix_socket: false
+  innodb_log_file_size: 64M
+  datadir: /var/lib/mysql
+  socket: /var/run/mysqld/mysqld.sock
+  #'roundcube'@'10.10.99.6' : wied0chioshaifosua3Chui4
+
+grafana:
+  nginx:
+    proxy: yes
+    server: grafana.server-01.wihop.by
+
+letsencrypt:
+  email: dashaakinshinachechulina@hotmail.com
+  certificates:
+    - zabbix.server-01.wihop.by
+    - grafana.server-01.wihop.by
+
+filebeat:
+  logstash_server: 10.10.99.10

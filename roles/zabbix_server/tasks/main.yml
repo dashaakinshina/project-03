@@ -1,0 +1,89 @@
+- name: "[zabbix-server] Install .deb package"
+  apt:
+    deb: "{{ zabbix_url }}"
+
+- name: "[zabbix-server] Install a list of packages"
+  apt:
+    name:
+      - zabbix-server-mysql
+      - zabbix-frontend-php
+      - zabbix-nginx-conf
+      - zabbix-sql-scripts
+      - zabbix-agent
+    update_cache: yes
+
+- name: "[zabbix-server] Make sure pymysql is present"
+  pip:
+    name: pymysql
+    state: present
+
+- name: "[zabbix-server] Create database"
+  community.mysql.mysql_db:
+    login_host: 127.0.0.1
+    login_user: root
+    login_password: "{{ mysql.root_password }}"
+    name: zabbix
+    encoding: utf8mb4
+    collation: utf8mb4_bin
+    state: present
+
+- name: "[zabbix-server] Create database user"
+  community.mysql.mysql_user:
+    login_host: 127.0.0.1
+    login_user: root
+    login_password: "{{ mysql.root_password }}"
+    name: zabbix
+    password: "{{ zabbix.zabbix_db_password }}"
+    priv: 'zabbix.*:ALL'
+    state: present
+
+- name: "[zabbix-server] Set log_bin_trust_function_creators variable to 1 persistently"
+  community.mysql.mysql_variables:
+    login_host: 127.0.0.1
+    login_user: root
+    login_password: "{{ mysql.root_password }}"
+    variable: log_bin_trust_function_creators
+    value: 1
+    mode: persist
+
+- name: "[zabbix-server] Initial schema and data"
+  shell: zcat /usr/share/zabbix-sql-scripts/mysql/server.sql.gz | mysql --default-character-set=utf8mb4 -uzabbix -p{{ zabbix_db_password }} zabbix
+
+- name: "[zabbix-server] Set log_bin_trust_function_creators variable to 0 persistently"
+  community.mysql.mysql_variables:
+    login_host: 127.0.0.1
+    login_user: root
+    login_password: "{{ mysql.root_password }}"
+    variable: log_bin_trust_function_creators
+    value: 0
+    mode: persist
+
+- name: restart mysql
+  service:
+    name: mysql
+    enabled: yes
+    state: restarted
+
+- name: "[zabbix-server] Edit zabbix config"
+  ansible.builtin.lineinfile:
+    path: /etc/zabbix/zabbix_server.conf
+    regexp: "# DBPassword="
+    line: "DBPassword={{ zabbix.zabbix_db_password }}"
+
+- name: "[zabbix-server] Edit nginx config"
+  ansible.builtin.lineinfile:
+    path: /etc/zabbix/nginx.conf
+    regexp: "#        listen"
+    line: "        listen 80;"
+
+- name: "[zabbix-server] Edit nginx config"
+  ansible.builtin.lineinfile:
+    path: /etc/zabbix/nginx.conf
+    regexp: "#        server_name"
+    line: "        server_name {{ zabbix.servername }};"
+
+- name: "[zabbix-server] restart nginx"
+  service:
+    name: nginx
+    enabled: yes
+    state: restarted

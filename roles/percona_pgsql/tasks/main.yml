@@ -1,0 +1,52 @@
+- name: Including tasks for Installation of Postgres
+  include_tasks: install.yml
+  tags: install
+  when: ansible_os_family != "RedHat"
+
+- name: Including tasks for Installation of Postgres
+  include_tasks: install_redhat.yml
+  tags: install
+  when: ansible_os_family == "RedHat"
+
+- name: Including tasks for Configuration on Postgres
+  include_tasks: "configure.yml"
+  tags: create_pmm_user_pgsql
+  when: ansible_os_family != "RedHat"
+
+- name: Including tasks for Configuration on Postgres
+  include_tasks: "configure_redhat.yml"
+  tags: create_pmm_user_pgsql
+  when: ansible_os_family == "RedHat"
+
+- name: Including tasks to Replication Setup
+  include_tasks: replication.yml
+  when: percona_pgsql.replication|bool == true
+
+- name: Including tasks for Database creation
+  include_tasks: database.yml
+  when: percona_pgsql.database_creation
+  tags: create_database_pgsql
+
+- name: Including tasks for User creation
+  include_tasks: users.yml
+  when: percona_pgsql.users_creation
+  tags: create_user_pgsql, create_pmm_user_pgsql
+  when: ansible_os_family != "RedHat"
+
+- name: Including tasks for User creation
+  include_tasks: users_redhat.yml
+  when: percona_pgsql.users_creation
+  tags: create_user_pgsql, create_pmm_user_pgsql
+  when: ansible_os_family == "RedHat"
+
+- name: Including tasks for RO User creation
+  include_tasks: read_only_user.yml
+  when: percona_pgsql.users_creation
+  tags: create_ro_user_pgsql
+  when: ansible_os_family != "RedHat"
+
+- name: Including tasks for RO User creation
+  include_tasks: read_only_user_redhat.yml
+  when: percona_pgsql.users_creation
+  tags: create_ro_user_pgsql
+  when: ansible_os_family == "RedHat"

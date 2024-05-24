@@ -1,0 +1,44 @@
+# - name: Log into private registry and force re-authorization
+#   docker_login:
+#     registry: registry.rebrainme.com
+#     username: 
+#     password: 
+#     reauthorize: yes
+
+- name: Create docker-compose.yml file
+  become: true
+  template:
+    src: docker-compose.yml.j2
+    dest: /tmp/docker-compose.yml
+    owner: ubuntu
+    group: ubuntu
+    mode: '0644'
+
+- name: Copy filebeat dir
+  copy:
+    src: filebeat/
+    dest: /tmp/filebeat
+
+- name: Create .env file
+  template:
+    src: .env.j2
+    dest: /tmp/.env
+
+- name: Create filebeat.yml file
+  template:
+    src: filebeat.yml.j2
+    dest: /tmp/filebeat/filebeat.yml
+
+- name: Setup using docker-compose
+  command: docker compose -p filebeat up -d
+  args:
+    chdir: /tmp/
+
+# - name: Start filebeat container
+#   docker_compose:
+#     project_src: /tmp/
+#     project_name: filebeat
+#     pull: yes
+#     build: no
+#     recreate: always
+#     state: present

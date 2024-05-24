@@ -1,0 +1,11 @@
+- name: start zabbix-server
+  service:
+    name: zabbix-server
+    enabled: yes
+    state: started
+
+- name: restart mysql
+  service:
+    name: mysql
+    enabled: yes
+    state: restarted

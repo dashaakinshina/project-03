@@ -1,0 +1,11 @@
+- name: "[bind] Install bind"
+  apt:
+    name: bind9
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: "[bind] Start bind"
+  service:
+    name: bind9
+    enabled: yes
+    state: started

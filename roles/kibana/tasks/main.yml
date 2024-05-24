@@ -1,0 +1,37 @@
+- name: "[kibana] Install kibana"
+  apt:
+    name: kibana
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: "[kibana] Start service"
+  service:
+    name: kibana
+    enabled: yes
+    state: started
+
+- name: "[kibana] Edit config 'server.host'"
+  ansible.builtin.lineinfile:
+    path: /etc/kibana/kibana.yml
+    regexp: "#server.host:"
+    line: "server.host: {{ kibana.server }}"
+
+- name: "[kibana] Edit config 'elasticsearch.hosts'"
+  ansible.builtin.lineinfile:
+    path: /etc/kibana/kibana.yml
+    regexp: "#elasticsearch.hosts:"
+    line: "elasticsearch.hosts: ['http://{{ kibana.server }}:9200']"
+
+- name: "[kibana] Restart service"
+  service:
+    name: kibana
+    enabled: yes
+    state: restarted
+
+- name: "[kibana] Create kibana admin"
+  shell: echo "{{ kibana.admin_user }}:`openssl passwd -crypt {{ kibana.admin_password }}`"
+  register: kibana_admin
+
+- name: "[kibana] Send credential 'kibana admin' to nginx revers proxy"
+  shell: echo '{{ kibana_admin.stdout }}' | sudo tee -a /etc/nginx/htpasswd.users
+  delegate_to: "{{ kibana.nginx_server }}"

@@ -1,0 +1,248 @@
+- set_fact:
+    _supported_ubuntu_versions:
+      - '18.04'
+      - '20.04'
+      - '22.04'
+
+- name: Check if OS is Ubuntu LTS
+  assert:
+    that:
+      - ansible_distribution == 'Ubuntu'
+      - ansible_distribution_version in _supported_ubuntu_versions
+    fail_msg: Server must be Ubuntu LTS
+
+- name: Add dependencies for PHP versions (Ubuntu).
+  apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+    state: present
+  when: ansible_distribution == "Ubuntu"
+
+- name: Make sure dirmngr is present so gnupg doesn't choke when we try to add Ondrej PHP PPA
+  apt:
+    name: dirmngr
+    state: present
+
+- name: Debug ansible_distribution_release
+  debug:
+    var: ansible_distribution_release
+
+- name: Add ondrej repo to allow multiple PHP versions
+  ansible.builtin.apt_repository:
+    repo: "ppa:ondrej/php"
+    update_cache: yes
+    codename: "{{ ansible_distribution_release }}"
+
+- name: Install php packages
+  apt:
+    name:
+      - php{{ php.version }}-bcmath
+      - php{{ php.version }}-cli
+      - php{{ php.version }}-curl
+      - php{{ php.version }}-gd
+      - php{{ php.version }}-fpm
+      - php{{ php.version }}-intl
+      - php{{ php.version }}-json
+      - php{{ php.version }}-mbstring
+      - php{{ php.version }}-mysql
+      - php{{ php.version }}-pgsql
+      - php{{ php.version }}-opcache
+      - php{{ php.version }}-readline
+      - php{{ php.version }}-soap
+      - php{{ php.version }}-sqlite3
+      - php{{ php.version }}-xml
+      - php{{ php.version }}-zip
+      - php{{ php.version }}-amqp
+      - php{{ php.version }}-imap
+      - php{{ php.version }}-gmp
+      - php{{ php.version }}-ssh2
+      - php{{ php.version }}-imagick
+    update_cache: yes
+    cache_valid_time: 3600
+  when: php.version | int < 8
+  notify: Restart php-fpm
+
+- name: Install php 8.0 and older packages
+  apt:
+    name:
+      - php{{ php.version }}-bcmath
+      - php{{ php.version }}-cli
+      - php{{ php.version }}-curl
+      - php{{ php.version }}-gd
+      - php{{ php.version }}-fpm
+      - php{{ php.version }}-intl
+      - php{{ php.version }}-mbstring
+      - php{{ php.version }}-mysql
+      - php{{ php.version }}-pgsql
+      - php{{ php.version }}-opcache
+      - php{{ php.version }}-readline
+      - php{{ php.version }}-soap
+      - php{{ php.version }}-sqlite3
+      - php{{ php.version }}-xml
+      - php{{ php.version }}-zip
+      - php{{ php.version }}-amqp
+      - php{{ php.version }}-imap
+      - php{{ php.version }}-gmp
+      - php{{ php.version }}-ssh2
+      - php{{ php.version }}-imagick
+    update_cache: yes
+    cache_valid_time: 3600
+  when: php.version | int >= 8
+  notify: Restart php-fpm
+
+- name: Install php independent modules/extensions
+  apt:
+    name:
+      - php-apcu
+      - php-apcu-bc
+      - php-geoip
+      - php-imagick
+      - php-redis
+    update_cache: yes
+    cache_valid_time: 3600
+  notify: Restart php-fpm
+
+- name: Install additional php modules/extensions
+  apt: name=php{{ item|join('-') }}
+  with_nested:
+    - "{{ php.version }}"
+    - "{{ php.modules }}"
+  when: php.modules is defined
+  notify: Restart php-fpm
+
+- name: Get old unwanted php packages
+  shell: dpkg-query -f '${binary:Package}\n' -W | grep php | grep php- | grep -v php{{ php.version }}-
+  register: php_unwanted
+  ignore_errors: True
+
+- name: Remove old unwanted php packages
+  apt:
+    # name: ['php.unwanted'] # use it instead of loop
+    name: "{{ item }}" # depreacted
+    state: absent
+    purge: yes
+  with_items: php_unwanted.stdout_lines
+  when: php_unwanted.stdout_lines is defined
+
+- name: Remove rubbish
+  apt:
+    autoremove: yes
+    autoclean: yes
+
+- name: Install php-xdebug
+  apt:
+    name: php-xdebug
+    update_cache: yes
+    cache_valid_time: 3600
+  when: php.xdebug_enabled
+  notify: Restart php-fpm
+
+- name: Install default php-xdebug extension config
+  file:
+    src: /etc/php/{{ php.version }}/mods-available/xdebug.ini
+    dest: "/etc/php/{{ php.version }}/{{ item }}/conf.d/20-xdebug.ini"
+    state: link
+  with_items:
+    - cli
+    - fpm
+  when: php.xdebug_enabled
+  notify: Restart php-fpm
+
+- name: Remove php-xdebug
+  apt:
+    name: php-xdebug
+    state: absent
+  when: not php.xdebug_enabled
+  notify: Restart php-fpm
+
+- name: Remove default php-xdebug extension config
+  file:
+    path: "/etc/php/{{ php.version }}/{{ item }}/conf.d/20-xdebug.ini"
+    state: absent
+  with_items:
+    - cli
+    - fpm
+  when: not php.xdebug_enabled
+  notify: Restart php-fpm
+
+- name: Install PHP-FPM configuration
+  template:
+    src: www.conf.j2
+    dest: /etc/php/{{ php.version }}/fpm/pool.d/www.conf
+  notify: Restart php-fpm
+
+- name: Create custom PHP configuration
+  template:
+    src: "{{ item }}.ini.j2"
+    dest: /etc/php/{{ php.version }}/mods-available/zzzz_{{ item }}.ini
+  with_items:
+    - custom
+    - custom_cli
+  notify: Restart php-fpm
+
+- name: Copy custom PHP configuration to CLI
+  file:
+    src: /etc/php/{{ php.version }}/mods-available/zzzz_{{ item }}.ini
+    dest: /etc/php/{{ php.version }}/cli/conf.d/zzzz_{{ item }}.ini
+    state: link
+  with_items:
+    - custom
+    - custom_cli
+
+- name: Copy custom PHP configuration to FPM
+  file:
+    src: /etc/php/{{ php.version }}/mods-available/zzzz_custom.ini
+    dest: /etc/php/{{ php.version }}/fpm/conf.d/zzzz_custom.ini
+    state: link
+  notify: Restart php-fpm
+
+- name: Reopen PHP logs
+  command: /usr/lib/php/php{{ php.version }}-fpm-reopenlogs
+  changed_when: no
+
+- name: Create PHP logs directory
+  file:
+    path: /var/log/php{{ php.version }}
+    state: directory
+    mode: 0755
+
+- name: Create PHP error.log file
+  copy:
+    content: ""
+    dest: /var/log/php{{ php.version }}/error.log
+    force: no
+    mode: 0666
+
+- name: Create PHP access.log file
+  copy:
+    content: ""
+    dest: /var/log/php{{ php.version }}/access.log
+    mode: 0666
+    force: no
+
+- name: Install logrotate PHP-FPM logs
+  template:
+    src: logrotate.j2
+    dest: /etc/logrotate.d/php{{ php.version }}-fpm-logrotate
+
+- name: Deploy OpCache config
+  template:
+    src: opcache.ini.j2
+    dest: /etc/php/{{ php.version }}/mods-available/opcache.ini
+
+- name: Download composer
+  get_url:
+    url: https://getcomposer.org/composer.phar
+    dest: /usr/local/bin/composer
+    mode: 0755
+
+- name: Update composer
+  command: composer self-update
+  register: update_composer_result
+  changed_when: (update_composer_result.rc == 0) and ("You are already using" not in update_composer_result.stderr)
+
+- name: Update PHP alternatives
+  alternatives:
+    name: php
+    path: /usr/bin/php{{ php.version }}

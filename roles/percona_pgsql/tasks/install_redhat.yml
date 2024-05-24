@@ -1,0 +1,27 @@
+
+- name: Update yum cache
+  yum:
+    update_cache: true
+
+- name: Add Percona Repository
+  yum:
+    name: https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+    state: present
+
+- name: Enable Percona Repository
+  command: percona-release setup ppg-{{ percona_pgsql.version }}
+
+- name: Install Postgresql on Red Hat
+  yum:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - acl
+    - percona-ppg-server12
+
+- name: Start postgresql service
+  ansible.builtin.service:
+    name: postgresql-{{ percona_pgsql.version }}
+    state: started
+    enabled: true
+  become: true

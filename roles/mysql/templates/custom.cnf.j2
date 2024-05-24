@@ -1,0 +1,6 @@
+[mysqld]
+{% if mysql.configuration %}
+{% for setting, value in mysql.configuration.items() %}
+{{ setting }} = {{ value }}
+{% endfor %}
+{% endif %}

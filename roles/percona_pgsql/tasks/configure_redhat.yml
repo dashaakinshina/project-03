@@ -1,0 +1,31 @@
+- name: Configure Postgres Port
+  lineinfile:
+    
+    dest: "/var/lib/pgsql/{{ percona_pgsql.version }}/data/postgresql.conf"
+    regexp: "^#?port.+$"
+    line: "port = '{{ percona_pgsql.postgres_port }}'"
+    state: present
+    mode: 0644
+  notify:
+    - "Restart percona postgresql"
+
+- name: Add new configuration in postgresql
+  blockinfile:
+    dest: /var/lib/pgsql/{{ percona_pgsql.version }}/data/postgresql.conf
+    block: |
+      include 'server.conf'
+  notify:
+    - "Restart percona postgresql"
+
+- name: Add new configuration to "server.conf"
+  blockinfile:
+    create: true
+    owner: postgres
+    group: postgres
+    mode: 0644
+    dest: /var/lib/pgsql/{{ percona_pgsql.version }}/data/server.conf
+    block: |
+      listen_addresses = '{{ percona_pgsql.postgres_listen_addresses }}'
+  notify:
+    - "Restart percona postgresql"
+

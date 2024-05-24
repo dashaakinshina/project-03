@@ -1,0 +1,69 @@
+- name: Create ro users in Postgres
+  postgresql_user:
+    name: "{{ item.name }}"
+    password: "{{ item.password | default(m1sqlagis2) }}"
+    port: "{{ percona_pgsql.postgres_port }}"
+    db: "{{ item.db | default('') }}"
+    role_attr_flags: "NOSUPERUSER,NOCREATEDB,NOCREATEROLE,LOGIN"
+    priv: CONNECT
+  with_items:
+    - "{{ percona_pgsql.psql_ro_users }}"
+  no_log: false
+  become: true
+  become_user: postgres
+  tags: create_ro_user_pgsql
+  when: percona_pgsql.replication|bool == False or percona_pgsql.role == 'master'
+
+- name: Update privs for new ro users
+  postgresql_privs:
+    state: present
+    type: table
+    database: "{{ item.db | default('') }}"
+    privs: SELECT
+    role: "{{ item.name }}"
+    schema: "{{ item.schema }}"
+    objs: ALL_IN_SCHEMA
+  with_items:
+    - "{{ percona_pgsql.psql_ro_users }}"
+  notify:
+    - "Restart percona postgresql"
+  become: true
+  become_user: postgres
+  tags: create_ro_user_pgsql
+  when: percona_pgsql.replication|bool == False or percona_pgsql.role == 'master'
+
+- name: Update pg_hub for new users redhat
+  postgresql_pg_hba:
+    dest: /var/lib/pgsql/{{ percona_pgsql.version }}/data/pg_hba.conf
+    contype: host
+    users: "{{ item.name }}"
+    source: 0.0.0.0/0
+    databases: "{{ item.db | default('all') }}"
+  with_items:
+    - "{{ percona_pgsql.psql_users }}"
+    - "{{ percona_pgsql.psql_group }}"
+    - "{{ percona_pgsql.pg_hba_users }}"
+    - "{{ percona_pgsql.psql_ro_users }}"
+  notify:
+    - "Restart percona postgresql"
+  become: true
+  become_user: postgres
+  tags: create_user_pgsql,create_ro_user_pgsql
+  when: percona_pgsql.replication|bool == False or percona_pgsql.role == 'master'
+
+- name: Ensure ro users in Postgres are configured
+  become: true
+  become_user: postgres
+  postgresql_user:
+    name: "{{ item.name }}"
+    password: "{{ item.password | default(m1sqlagis2) }}"
+    encrypted: "{{ item.encrypted | default(omit) }}"
+    role_attr_flags: "NOSUPERUSER,NOCREATEDB,NOCREATEROLE,LOGIN"
+    priv: CONNECT
+    db: "{{ item.db | default(omit) }}"
+    state: "{{ item.state | default('present') }}"
+  with_items:
+    - "{{ percona_pgsql.psql_ro_users }}"
+  no_log: true
+  tags: create_ro_user_pgsql
+  when: percona_pgsql.replication|bool == False or percona_pgsql.role == 'master'

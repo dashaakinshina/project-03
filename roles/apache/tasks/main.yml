@@ -1,0 +1,55 @@
+- name: Install prerequisites
+  apt: name={{ item }} update_cache=yes state=latest force_apt_get=yes
+  loop: [ 'aptitude' ]
+
+- name: Install Apache2 Packages
+  apt: name={{ item }} update_cache=yes state=latest
+  loop: [ 'apache2', 'libapache2-mod-php', 'php-pgsql', 'php-mbstring']
+
+- name: Create document root
+  file:
+    path: "{{ item.document_root }}"
+    state: directory
+    owner: "{{ apache.app_user }}"
+    mode: '0755'
+  loop: '{{ apache.sites }}'
+
+- name: Set up Apache ports
+  template:
+    src: "ports.conf.j2"
+    dest: "/etc/apache2/ports.conf"
+  notify: Reload Apache
+
+- name: Set up Apache virtualhost
+  template:
+    src: "apache.conf.j2"
+    dest: "/etc/apache2/sites-available/{{ item.conf }}"
+  notify: Reload Apache
+  loop: '{{ apache.sites }}'
+
+- name: Enable new site
+  shell: /usr/sbin/a2ensite {{ item.conf }}
+  notify: Reload Apache
+  loop: '{{ apache.sites }}'
+
+- name: Disable default Apache site
+  shell: /usr/sbin/a2dissite 000-default.conf
+  when: apache.disable_default
+  notify: Reload Apache
+
+# PHP Info Page
+- name: Sets Up PHP Info Page
+  template:
+    src: "info.php.j2"
+    dest: "{{ item.document_root }}/info.php"
+  loop: '{{ apache.sites }}'
+
+- name: Reload Apache
+  service:
+    name: apache2
+    state: reloaded
+
+- name: Restart Apache
+  service:
+    name: apache2
+    state: restarted

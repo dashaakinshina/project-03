@@ -1,0 +1,21 @@
+- hosts: all
+  become: yes
+  roles:
+    - { role: base_setup, tags: ['base_setup'], when: roles.base_setup }
+    - { role: docker, tags: ['docker'], when: roles.docker }
+    - { role: elk, tags: ['elk'], when: roles.elk }
+    - { role: nginx, tags: ['nginx'], when: roles.nginx }
+    - { role: apache, tags: ['apache'], when: roles.apache }
+    - { role: percona_pgsql, tags: ['percona_pgsql'], when: roles.percona_pgsql }
+    - { role: php, tags: ['php'], when: roles.php }
+    - { role: mysql, tags: ['mysql'], when: roles.mysql }
+    - { role: zabbix_server, tags: ['zabbix_server'], when: roles.zabbix_server }
+    - { role: bind, tags: ['bind'], when: roles.bind }
+    - { role: grafana, tags: ['grafana'], when: roles.grafana }
+    - { role: elasticsearch, tags: ['elasticsearch'], when: roles.elasticsearch }
+    - { role: kibana, tags: ['kibana'], when: roles.kibana }
+    - { role: logstash, tags: ['logstash'], when: roles.logstash }
+    - { role: filebeat, tags: ['filebeat'], when: roles.filebeat }
+    - { role: filebeat_docker, tags: ['filebeat_docker'], when: roles.filebeat_docker }
+    - { role: certbot, tags: ['certbot'], when: roles.certbot }
+    - { role: zabbix_agent, tags: ['zabbix_agent'], when: roles.zabbix_agent }

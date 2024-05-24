@@ -1,0 +1,40 @@
+/var/log/php{{ php.version }}/access.log {
+    rotate 30
+    daily
+    missingok
+    notifempty
+    compress
+    delaycompress
+    create 666 root root
+    postrotate
+        /usr/lib/php/php{{ php.version }}-fpm-reopenlogs
+    endscript
+}
+
+/var/log/php{{ php.version }}/error.log {
+    rotate 30
+    daily
+    missingok
+    notifempty
+    compress
+    delaycompress
+    create 666 root root
+    postrotate
+        /usr/lib/php/php{{ php.version }}-fpm-reopenlogs
+    endscript
+}
+
+{% if php.slowlog.enabled %}
+/var/log/php{{ php.version }}/slow.log {
+    rotate 30
+    daily
+    missingok
+    notifempty
+    compress
+    delaycompress
+    create 666 root root
+    postrotate
+        /usr/lib/php/php{{ php.version }}-fpm-reopenlogs
+    endscript
+}
+{% endif %}

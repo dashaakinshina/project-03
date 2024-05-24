@@ -1,0 +1,41 @@
+error_reporting = E_ALL & ~E_NOTICE & ~E_STRICT & ~E_DEPRECATED
+display_errors = 0
+error_log=/var/log/php{{ php.version }}/error.log
+cgi.fix_pathinfo = 0
+apc.enable_cli = 1
+session.cookie_secure = True
+
+short_open_tag = 1 ; TODO remove
+
+max_execution_time = {{ php.max_execution_time }}
+memory_limit = {{ php.memory_limit }}
+upload_max_filesize = {{ php.upload_limit }}
+post_max_size = {{ php.upload_limit }}
+
+{% if php.xdebug_enabled %}
+xdebug.remote_connect_back=1
+xdebug.default_enable=1
+xdebug.max_nesting_level = 1000
+xdebug.remote_enable=1
+xdebug.remote_autostart=0
+xdebug.remote_handler=dbgp
+xdebug.remote_mode=req
+xdebug.remote_port=9000
+xdebug.profiler_enable=0
+xdebug.profiler_enable_trigger=0
+xdebug.profiler_output_dir="/tmp"
+{% endif %}
+
+opcache.enable=1
+opcache.enable_cli=1
+opcache.max_accelerated_files=65407
+opcache.memory_consumption={{ php.opcache.memory_consumption }}
+opcache.interned_strings_buffer=16
+; removed during this issue https://github.com/zendtech/ZendOptimizerPlus/issues/146
+; opcache.fast_shutdown=1
+opcache.validate_timestamps = 1
+opcache.revalidate_freq = 60
+opcache.revalidate_path = 1
+opcache.enable_file_override=1
+opcache.huge_code_pages=1
+default_socket_timeout = {{ php.default_socket_timeout }}

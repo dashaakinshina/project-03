@@ -1,0 +1,41 @@
+roles:
+  base_setup: yes
+  elasticsearch: yes
+  kibana: yes
+  elk: yes
+  percona_pgsql: yes
+  logstash: yes
+  filebeat: yes
+  zabbix_agent: yes
+
+elasticsearch:
+  bind: 10.10.99.10
+
+kibana:
+  server: "10.10.99.10"
+  url: kibana.server-02.wihop.by
+  nginx_server: server-02
+  admin_user: kibana
+  admin_password: feiKu7ien0gi5daeph6pac1phahbea0a
+
+filebeat:
+  logstash_server: 10.10.99.10
+
+percona_pgsql:
+  version: 12
+  postgres_listen_addresses: 0.0.0.0
+  psql_databases:
+    - name: wp_db
+    - name: demo_db
+  psql_users:
+    - name: wp_user
+      password: "123qwe123"
+      db: wp_db
+      priv: ALL
+      state: "present"
+    - name: demo_user
+      password: "123qwe123"
+      db: demo_db
+      priv: ALL
+      state: "present"
+  psql_ro_users: []

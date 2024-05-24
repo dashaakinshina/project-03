@@ -1,0 +1,18 @@
+mysql:
+  host: localhost
+  root_password: dfkeo9dfh439fddku
+  datadog_password: slfyrnv63skf6e
+  port: 3306
+  login_unix_socket: false
+  innodb_log_file_size: 64M
+  datadir: /var/lib/mysql
+  socket: /var/run/mysqld/mysqld.sock
+  configuration:
+    slow_query_log: 1
+    slow_query_log_file: /var/log/mysql/mysql-slow.log
+    long_query_time: 1
+    bind-address: 127.0.0.1
+    group_concat_max_len: 18446744073709551615
+    binlog_expire_logs_seconds: 86400
+    max_allowed_packet: 128M
+    innodb_buffer_pool_size: "{{ (ansible_memtotal_mb * 0.7)|int|abs }}M" # Use 70% of RAM

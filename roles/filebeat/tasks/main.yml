@@ -1,0 +1,49 @@
+- name: "[filebeat] Create sources list elasticsearch"
+  shell: echo "deb [trusted=yes] https://mirror.yandex.ru/mirrors/elastic/7/ stable main" > /etc/apt/sources.list.d/elastic-7.x.list &&
+         apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys D27D666CD88E42B4
+
+- name: "[filebeat] Update cache"
+  apt:
+    update_cache: yes
+
+- name: "[filebeat] Install filebeat"
+  apt:
+    name: filebeat
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: "[filebeat] Edit config (output.elasticsearch)"
+  ansible.builtin.lineinfile:
+    path: /etc/filebeat/filebeat.yml
+    regexp: "^output.elasticsearch:"
+    line: "#output.elasticsearch:"
+
+- name: "[filebeat] Edit config (output.elasticsearch.hosts)"
+  ansible.builtin.lineinfile:
+    path: /etc/filebeat/filebeat.yml
+    regexp: "hosts: ..localhost:9200.."
+    line: "#  hosts: [\"localhost:9200\"]"
+
+- name: "[filebeat] Edit config (output.logstash)"
+  ansible.builtin.lineinfile:
+    path: /etc/filebeat/filebeat.yml
+    regexp: "^#output.logstash:"
+    line: "output.logstash:"
+
+- name: "[filebeat] Edit config (output.logstash.hosts)"
+  ansible.builtin.lineinfile:
+    path: /etc/filebeat/filebeat.yml
+    regexp: "^  #hosts: ..localhost:5044.."
+    line: "  hosts: [\"{{ filebeat.logstash_server }}:5044\"]"
+
+- name: "[filebeat] Restart filebeat"
+  service:
+    name: filebeat
+    enabled: yes
+    state: restarted
+
+- name: "[filebeat] Enable modules: system"
+  shell: filebeat modules enable system
+
+- name: "[filebeat] List modules"
+  shell: filebeat modules list

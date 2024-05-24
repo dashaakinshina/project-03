@@ -1,0 +1,10 @@
+- name: "[grafana] Configure nginx"
+  template:
+    src: grafana.conf.j2
+    dest: /etc/nginx/sites-enabled/grafana.conf
+  when: grafana.nginx.proxy == True
+  notify: restart nginx
+
+- name: Debug
+  debug:
+    msg: "grafana.nginx.proxy = {{ grafana.nginx.proxy }}"
