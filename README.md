@@ -17,3 +17,4 @@ May 23 09:56:18 server-02 postfix/smtp[261379]: 779AD671A0: to=<hidden@hidden>, 
 Запрос в службу технической поддержки результатов не дал:
 
 ![image](https://github.com/dashaakinshina/project-03/assets/122722303/f82969e7-8255-40b9-b4bf-98d017ce67e0)
+
